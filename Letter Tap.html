@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digital Tapple</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14161f; --panel:#1e2130; --panel2:#262a3d; --ink:#f3f1ea; --muted:#9a9db0;
+    --red:#e8473f; --red-d:#b8302a; --yellow:#ffc93c; --green:#3ccf8e; --blue:#4c8dff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Fredoka,system-ui,sans-serif}
+  body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 14px 40px}
+  h1{margin:0 0 4px;font-size:clamp(28px,5vw,40px);letter-spacing:.5px}
+  h1 span{color:var(--red)}
+  .sub{color:var(--muted);margin:0 0 18px;font-size:15px;text-align:center}
+  .layout{display:grid;grid-template-columns:minmax(260px,320px) minmax(320px,560px);gap:22px;width:100%;max-width:920px;align-items:start}
+  @media (max-width:820px){.layout{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border-radius:18px;padding:18px}
+  .panel h2{margin:0 0 12px;font-size:16px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:600}
+
+  /* card */
+  .card-wrap{perspective:900px;margin-bottom:14px}
+  .card{position:relative;height:170px;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.3,1.3,.5,1)}
+  .card.flipped{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;border-radius:14px;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}
+  .back{background:repeating-linear-gradient(45deg,var(--red) 0 14px,var(--red-d) 14px 28px);font-size:28px;font-weight:700;box-shadow:inset 0 0 0 6px #fff3}
+  .front{background:#fffaf0;color:#222;transform:rotateY(180deg);flex-direction:column;gap:6px;box-shadow:inset 0 0 0 6px var(--yellow)}
+  .front small{color:#888;font-size:12px;letter-spacing:2px;text-transform:uppercase}
+  .front .topic{font-size:24px;font-weight:700;line-height:1.15}
+  .deck-info{color:var(--muted);font-size:13px;text-align:center;margin-top:-4px;margin-bottom:10px}
+
+  button{font-family:inherit;font-size:15px;font-weight:600;border:0;border-radius:12px;padding:10px 14px;cursor:pointer;color:var(--ink);background:var(--panel2);transition:transform .08s,filter .15s}
+  button:hover{filter:brightness(1.15)}
+  button:active{transform:scale(.97)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .primary{background:var(--red)}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row>button{flex:1}
+
+  /* players */
+  .players{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:6px}
+  .players li{display:flex;align-items:center;gap:8px;background:var(--panel2);border-radius:10px;padding:8px 10px;border:2px solid transparent}
+  .players li.turn{border-color:var(--yellow)}
+  .players li.out{opacity:.38;text-decoration:line-through}
+  .players li .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .players li .score{background:#0003;border-radius:8px;padding:2px 8px;font-size:13px}
+  .players li .x{background:none;padding:2px 6px;color:var(--muted);font-size:14px}
+  .add{display:flex;gap:6px}
+  .add input{flex:1;min-width:0;font-family:inherit;font-size:15px;background:var(--panel2);color:var(--ink);border:0;border-radius:10px;padding:9px 10px}
+  .settings{display:flex;flex-direction:column;gap:8px;margin-top:14px;font-size:14px;color:var(--muted)}
+  .settings label{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .settings select{font-family:inherit;background:var(--panel2);color:var(--ink);border:0;border-radius:8px;padding:5px 8px}
+
+  /* wheel */
+  .board{display:flex;flex-direction:column;align-items:center}
+  .status{min-height:30px;font-size:20px;font-weight:600;text-align:center;margin-bottom:8px}
+  .status .who{color:var(--yellow)}
+  .wheel{position:relative;width:min(100%,500px);aspect-ratio:1;border-radius:50%;
+    background:radial-gradient(circle at 50% 50%,#2c3046 0 58%,#1a1d2b 58% 100%);box-shadow:0 10px 40px #0007,inset 0 0 0 10px var(--red)}
+  .key{position:absolute;width:13%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);
+    font-size:clamp(16px,4.2vw,26px);font-weight:700;padding:0;background:#fffaf0;color:#222;
+    box-shadow:0 5px 0 #b9b2a3;transition:transform .15s,box-shadow .15s,background .2s,opacity .2s}
+  .key:hover:not(:disabled){transform:translate(-50%,-55%)}
+  .key.used{background:#3a3e55;color:#5b6080;box-shadow:0 1px 0 #222;transform:translate(-50%,-46%);cursor:default}
+  .key:disabled:not(.used){opacity:.55}
+  .hub{position:absolute;left:50%;top:50%;width:36%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;flex-direction:column;background:var(--red);box-shadow:0 6px 0 var(--red-d);cursor:pointer;user-select:none}
+  .hub svg{position:absolute;inset:-6%;width:112%;height:112%;transform:rotate(-90deg)}
+  .hub .t{font-size:clamp(34px,9vw,60px);font-weight:700;line-height:1}
+  .hub .lbl{font-size:clamp(11px,2.4vw,14px);letter-spacing:1px;text-transform:uppercase;opacity:.9}
+  .hub.warn{background:var(--yellow);color:#222;box-shadow:0 6px 0 #c99a1d}
+  .ring-bg{stroke:#0003}
+  .ring{stroke:#fff;transition:stroke-dashoffset .1s linear}
+  .hub.warn .ring{stroke:#222}
+  .flash{position:fixed;inset:0;pointer-events:none;background:var(--red);opacity:0;transition:opacity .5s}
+  .flash.on{opacity:.35;transition:none}
+  .hint{color:var(--muted);font-size:13px;margin-top:12px;text-align:center}
+
+  .overlay{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:5;padding:20px}
+  .overlay.show{display:flex}
+  .modal{background:var(--panel);border-radius:18px;padding:26px;max-width:380px;width:100%;text-align:center}
+  .modal h3{margin:0 0 8px;font-size:26px}
+  .modal p{color:var(--muted);margin:0 0 18px}
+</style>
+</head>
+<body>
+<h1>Digital <span>Tapple</span></h1>
+<p class="sub">Draw a topic, then take turns: say a word that fits, tap its first letter, and pass it on before time runs out.</p>
+
+<div class="layout">
+  <div>
+    <div class="panel">
+      <h2>Topic</h2>
+      <div class="card-wrap"><div class="card" id="card">
+        <div class="face back">TAPPLE</div>
+        <div class="face front"><small>Name something that is…</small><div class="topic" id="topic">—</div></div>
+      </div></div>
+      <div class="deck-info" id="deckInfo"></div>
+      <div class="row">
+        <button class="primary" id="drawBtn">Draw card</button>
+        <button id="readBtn" disabled>🔊 Read</button>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <h2>Players</h2>
+      <ul class="players" id="players"></ul>
+      <form class="add" id="addForm">
+        <input id="nameIn" placeholder="Add player" maxlength="18">
+        <button type="submit">Add</button>
+      </form>
+      <div class="settings">
+        <label>Turn timer
+          <select id="timeSel"><option value="5">5 s</option><option value="10" selected>10 s</option><option value="15">15 s</option><option value="20">20 s</option><option value="0">Off</option></select>
+        </label>
+        <label>Letters
+          <select id="letterSel"><option value="classic" selected>Classic (20)</option><option value="all">All 26</option></select>
+        </label>
+        <label>Voice <select id="voiceSel"><option value="on" selected>On</option><option value="off">Off</option></select></label>
+        <label>Clock tick <select id="tickSel"><option value="on" selected>On</option><option value="off">Off</option></select></label>
+        <label>Say letter on hover <select id="hoverSel"><option value="on" selected>On</option><option value="off">Off</option></select></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel board">
+    <div class="status" id="status">Draw a card to begin</div>
+    <div class="wheel" id="wheel">
+      <div class="hub" id="hub" title="Start / pause">
+        <svg viewBox="0 0 100 100"><circle class="ring-bg" cx="50" cy="50" r="46" fill="none" stroke-width="5"/><circle class="ring" id="ring" cx="50" cy="50" r="46" fill="none" stroke-width="5" stroke-linecap="round"/></svg>
+        <div class="t" id="hubT">▶</div><div class="lbl" id="hubL">Start</div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:16px;width:100%;max-width:500px">
+      <button id="resetBtn">Reset letters</button>
+      <button id="newRoundBtn">New round</button>
+    </div>
+    <div class="hint">Keyboard: type a letter to tap it · Space = start/pause</div>
+  </div>
+</div>
+
+<div class="flash" id="flash"></div>
+<div class="overlay" id="overlay"><div class="modal">
+  <h3 id="mTitle"></h3><p id="mText"></p>
+  <button class="primary" id="mBtn">Next round</button>
+</div></div>
+
+<script>
+const TOPICS = ["Animals","Fruits","Vegetables","Countries","U.S. states","Cities","Things in a kitchen","Sports","Movies","TV shows","Bands or singers","Famous people","Things that are cold","Things that are hot","Things that fly","Things in the ocean","Body parts","Clothing","Board games","Jobs","School subjects","Things in a bathroom","Car brands","Breakfast foods","Desserts","Drinks","Things you can recycle","Musical instruments","Colors","Things that are round","Things with wheels","Cartoon characters","Superheroes","Things in a park","Things you plug in","Things at the beach","Things that are sticky","Words that rhyme with 'ball'","Pizza toppings","Holidays","Things in space","Insects","Birds","Dog breeds","Things you find in a wallet","Things that smell","Things in a hospital","Things in a classroom","Furniture","Tools","Things that are green","Things that are yellow","Fast food chains","Video games","Hobbies","Things you do on vacation","Weather words","Things that are soft","Things in a garden","Things that make noise","Rivers or lakes","Things that are small","Things in a fairy tale","Things you can climb","Things with buttons","Kinds of shoes","Things in a grocery store","Fictional villains","Things that are fast","Languages","Things that are expensive","Things you can open","Breads or pastries","Things at a wedding","Dance styles","Science words","Things in a toolbox","Spices or herbs","Things you collect","Things at a zoo"];
+const CLASSIC = "ABCDEFGHIJKLMNOPRSTW".split("");
+const ALL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+const $ = id => document.getElementById(id);
+const store = { get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}} };
+
+let players = store.get("tapple.players", [{name:"Player 1",score:0},{name:"Player 2",score:0}]);
+let deck = [], topic = null, used = new Set(), letters = CLASSIC;
+let turn = 0, out = new Set(), running = false, paused = false;
+let timeLimit = 10, timeLeft = 10, tickId = null, lastTs = 0;
+
+/* ---------- audio ---------- */
+let actx;
+function beep(freq=660, dur=.12, type="sine", vol=.15){
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    const o=actx.createOscillator(), g=actx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(actx.destination);
+    g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime+dur);
+    o.start(); o.stop(actx.currentTime+dur);
+  }catch{}
+}
+/* tick-tock: alternating pitch, louder in the last 3 seconds */
+function clockTick(sec){
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    const t=actx.currentTime, urgent=sec<=3;
+    const o=actx.createOscillator(), g=actx.createGain(), f=actx.createBiquadFilter();
+    o.type="square"; o.frequency.value = sec%2 ? 1800 : 1350;
+    f.type="bandpass"; f.frequency.value=o.frequency.value; f.Q.value=8;
+    g.gain.setValueAtTime(urgent?.5:.25, t);
+    g.gain.exponentialRampToValueAtTime(.0001, t+.035);
+    o.connect(f); f.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t+.04);
+  }catch{}
+}
+function speak(text){
+  if($("voiceSel").value!=="on") return;
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text); u.rate=1; u.pitch=1.05;
+    speechSynthesis.speak(u);
+  }catch{}
+}
+
+/* ---------- deck ---------- */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function refillDeck(){deck=shuffle([...TOPICS])}
+function drawCard(){
+  if(!deck.length) refillDeck();
+  topic = deck.pop();
+  const card=$("card");
+  card.classList.remove("flipped");
+  setTimeout(()=>{ $("topic").textContent=topic; card.classList.add("flipped"); speak("Name something that is: "+topic.replace(/^Things /i,"things ")); }, card.classList.contains("flipped")?300:0);
+  $("readBtn").disabled=false;
+  $("deckInfo").textContent = deck.length+" cards left in deck";
+  newRound(false);
+}
+
+/* ---------- wheel ---------- */
+function buildWheel(){
+  document.querySelectorAll(".key").forEach(k=>k.remove());
+  const n=letters.length, R=40.5;
+  letters.forEach((L,i)=>{
+    const a = (i/n)*2*Math.PI - Math.PI/2;
+    const b=document.createElement("button");
+    b.className="key"+(used.has(L)?" used":"");
+    b.textContent=L; b.dataset.l=L;
+    b.style.left=(50+R*Math.cos(a))+"%"; b.style.top=(50+R*Math.sin(a))+"%";
+    b.onclick=()=>tap(L);
+    b.onmouseenter=()=>{ if($("hoverSel").value==="on" && !used.has(L)) speak(L); };
+    b.onfocus=b.onmouseenter;
+    $("wheel").appendChild(b);
+  });
+  refreshKeys();
+}
+function refreshKeys(){
+  document.querySelectorAll(".key").forEach(k=>{
+    const L=k.dataset.l;
+    k.classList.toggle("used",used.has(L));
+    k.disabled = used.has(L) || !topic;
+  });
+}
+function tap(L){
+  if(!topic || used.has(L)) return;
+  if(!running){ start(); }
+  if(paused) togglePause();
+  used.add(L); beep(880,.08,"triangle"); speak(L);
+  refreshKeys();
+  if(used.size===letters.length){
+    status("All letters used! Resetting the wheel…");
+    setTimeout(()=>{used.clear();refreshKeys();},900);
+  }
+  nextTurn();
+}
+function resetLetters(){used.clear();refreshKeys()}
+
+/* ---------- players ---------- */
+function renderPlayers(){
+  const ul=$("players"); ul.innerHTML="";
+  players.forEach((p,i)=>{
+    const li=document.createElement("li");
+    if(running && i===turn) li.className="turn";
+    if(out.has(i)) li.classList.add("out");
+    li.innerHTML=`<span class="name"></span><span class="score">${p.score}</span><button class="x" title="Remove">✕</button>`;
+    li.querySelector(".name").textContent=p.name;
+    li.querySelector(".x").onclick=()=>{ if(running) return; players.splice(i,1); save(); renderPlayers(); };
+    ul.appendChild(li);
+  });
+}
+function save(){store.set("tapple.players",players)}
+$("addForm").onsubmit=e=>{
+  e.preventDefault();
+  const n=$("nameIn").value.trim(); if(!n) return;
+  players.push({name:n,score:0}); $("nameIn").value=""; save(); renderPlayers();
+};
+
+/* ---------- game flow ---------- */
+function status(html){$("status").innerHTML=html}
+function alive(){return players.map((_,i)=>i).filter(i=>!out.has(i))}
+function newRound(clearCard=true){
+  stopTimer(); running=false; paused=false; out.clear(); used.clear();
+  turn = players.length ? Math.floor(Math.random()*players.length) : 0;
+  if(clearCard && !topic){}
+  refreshKeys(); renderPlayers(); setHub("▶","Start"); setRing(1);
+  status(topic ? `Ready — <span class="who">${esc(players[turn]?.name||"Player")}</span> goes first` : "Draw a card to begin");
+}
+function start(){
+  if(!topic) return;
+  if(players.length===0){players.push({name:"Player 1",score:0});save();}
+  running=true; paused=false; resetTimer(); renderPlayers(); announceTurn();
+}
+function announceTurn(){status(`<span class="who">${esc(players[turn].name)}</span>'s turn`)}
+function nextTurn(){
+  const a=alive(); if(a.length===0) return;
+  let i=turn; do{ i=(i+1)%players.length }while(out.has(i));
+  turn=i; resetTimer(); renderPlayers(); announceTurn();
+}
+function timeUp(){
+  stopTimer(); beep(180,.5,"sawtooth",.2);
+  const f=$("flash"); f.classList.add("on"); setTimeout(()=>f.classList.remove("on"),60);
+  const loser=players[turn].name;
+  speak(loser+" is out");
+  if(players.length<=1){ endRound(null, `${loser} ran out of time.`); return; }
+  out.add(turn);
+  const a=alive();
+  if(a.length===1){ endRound(a[0], `${loser} ran out of time.`); return; }
+  status(`⏰ <span class="who">${esc(loser)}</span> is out!`);
+  setTimeout(()=>{ if(running) nextTurn(); },900);
+}
+function endRound(winner, why){
+  running=false; stopTimer(); renderPlayers();
+  if(winner!=null){ players[winner].score++; save(); renderPlayers(); }
+  $("mTitle").textContent = winner!=null ? `🏆 ${players[winner].name} wins!` : "Round over";
+  $("mText").textContent = why + (winner!=null ? ` ${players[winner].name} takes the card.` : "");
+  if(winner!=null) speak(players[winner].name+" wins the round");
+  $("overlay").classList.add("show");
+  setHub("▶","Start");
+}
+$("mBtn").onclick=()=>{ $("overlay").classList.remove("show"); drawCard(); };
+
+/* ---------- timer ---------- */
+function setHub(t,l){$("hubT").textContent=t;$("hubL").textContent=l}
+function setRing(frac){
+  const c=2*Math.PI*46, r=$("ring");
+  r.style.strokeDasharray=c; r.style.strokeDashoffset=c*(1-frac);
+}
+function resetTimer(){
+  stopTimer();
+  timeLimit = +$("timeSel").value;
+  if(!timeLimit){ setHub("∞","Untimed"); setRing(1); $("hub").classList.remove("warn"); return; }
+  timeLeft=timeLimit; lastTs=performance.now(); lastWhole=Math.ceil(timeLimit); paintTimer();
+  tickId=requestAnimationFrame(tick);
+}
+let lastWhole=null;
+function tick(ts){
+  if(paused||!running) return;
+  timeLeft -= (ts-lastTs)/1000; lastTs=ts;
+  if(timeLeft<=0){ timeLeft=0; paintTimer(); timeUp(); return; }
+  paintTimer();
+  const whole=Math.ceil(timeLeft);
+  if(whole!==lastWhole && $("tickSel").value==="on") clockTick(whole);
+  lastWhole=whole;
+  tickId=requestAnimationFrame(tick);
+}
+function paintTimer(){
+  setHub(Math.ceil(timeLeft), paused?"Paused":"seconds");
+  setRing(timeLeft/timeLimit);
+  $("hub").classList.toggle("warn", timeLeft<=3);
+}
+function stopTimer(){ if(tickId) cancelAnimationFrame(tickId); tickId=null; lastWhole=null; $("hub").classList.remove("warn"); }
+function togglePause(){
+  if(!running) { start(); return; }
+  if(!timeLimit) return;
+  paused=!paused;
+  if(paused){ stopTimer(); setHub(Math.ceil(timeLeft),"Paused"); }
+  else{ lastTs=performance.now(); tickId=requestAnimationFrame(tick); }
+}
+
+/* ---------- wiring ---------- */
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+$("drawBtn").onclick=drawCard;
+$("readBtn").onclick=()=>topic&&speak("Name something that is: "+topic);
+$("hub").onclick=togglePause;
+$("resetBtn").onclick=resetLetters;
+$("newRoundBtn").onclick=()=>newRound();
+$("letterSel").onchange=e=>{ letters = e.target.value==="all"?ALL:CLASSIC; used.clear(); buildWheel(); };
+$("timeSel").onchange=()=>{ if(running) resetTimer(); };
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT") return;
+  if($("overlay").classList.contains("show")){ if(e.key==="Enter"||e.key===" "){e.preventDefault();$("mBtn").click();} return; }
+  if(e.key===" "){ e.preventDefault(); togglePause(); return; }
+  const L=e.key.toUpperCase();
+  if(L.length===1 && letters.includes(L)) tap(L);
+});
+
+refillDeck(); buildWheel(); renderPlayers(); setRing(1);
+$("deckInfo").textContent = deck.length+" cards in deck";
+</script>
+</body>
+</html>
